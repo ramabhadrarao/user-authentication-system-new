@@ -29,6 +29,26 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             {children}
           </div>
         </div>
+        <footer className="footer footer-transparent d-print-none">
+          <div className="container-xl">
+            <div className="row text-center align-items-center flex-row-reverse">
+              <div className="col-12 col-lg-auto mt-3 mt-lg-0">
+                <ul className="list-inline list-inline-dots mb-0">
+                  <li className="list-inline-item">
+                    Professional Auth System
+                  </li>
+                </ul>
+              </div>
+              <div className="col-lg-auto ms-lg-auto">
+                <ul className="list-inline list-inline-dots mb-0">
+                  <li className="list-inline-item">
+                    &copy; 2024 All rights reserved.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </footer>
       </div>
     </div>
   );
