@@ -3,13 +3,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import Alert from '../components/UI/Alert';
 import LoadingSpinner from '../components/UI/LoadingSpinner';
-import { User, Mail, Lock, Camera, Save, Key } from 'lucide-react';
+import { User, Mail, Lock, Camera, Save, Key, Shield, Calendar } from 'lucide-react';
 
 const Profile: React.FC = () => {
   const { user, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState(user?.profilePhotoUrl || '');
   
   const [profileData, setProfileData] = useState({
     firstName: '',
@@ -30,6 +31,7 @@ const Profile: React.FC = () => {
         lastName: user.lastName || '',
         email: user.email
       });
+      setProfilePhotoUrl(user.profilePhotoUrl || '');
     }
   }, [user]);
 
@@ -99,8 +101,14 @@ const Profile: React.FC = () => {
     setLoading(true);
     try {
       const response = await apiService.uploadProfilePhoto(file);
-      updateUser({ profilePhotoUrl: response.profilePhotoUrl });
+      // Update both the local state and context
+      const newPhotoUrl = response.profilePhotoUrl;
+      setProfilePhotoUrl(newPhotoUrl);
+      updateUser({ profilePhotoUrl: newPhotoUrl });
       setMessage({ type: 'success', text: 'Profile photo updated successfully!' });
+      
+      // Force re-render by resetting the file input
+      e.target.value = '';
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message || 'Photo upload failed' });
     } finally {
@@ -120,6 +128,7 @@ const Profile: React.FC = () => {
             <div className="row g-2 align-items-center">
               <div className="col">
                 <h2 className="page-title">Profile Settings</h2>
+                <div className="text-muted mt-1">Manage your account settings and preferences</div>
               </div>
             </div>
           </div>
@@ -137,53 +146,110 @@ const Profile: React.FC = () => {
 
         <div className="row">
           <div className="col-md-3">
+            {/* Profile Card */}
             <div className="card">
               <div className="card-body text-center">
-                <div className="avatar avatar-xl mb-3 position-relative">
-                  {user.profilePhotoUrl ? (
+                <div 
+                  className="mb-3 position-relative mx-auto" 
+                  style={{ width: '8rem', height: '8rem' }}
+                >
+                  {profilePhotoUrl ? (
                     <img 
-                      src={`http://localhost:5000${user.profilePhotoUrl}`} 
+                      src={`http://localhost:5000${profilePhotoUrl}`} 
                       alt="Profile"
-                      className="avatar-img"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        borderRadius: '50%',
+                        border: '4px solid #e5e7eb'
+                      }}
+                      key={profilePhotoUrl} // Force re-render when URL changes
                     />
                   ) : (
-                    <div className="avatar-initials bg-primary text-white">
+                    <div 
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '2.5rem',
+                        fontWeight: 600,
+                        borderRadius: '50%',
+                        background: '#206bc4',
+                        color: '#fff'
+                      }}
+                    >
                       {user.displayName?.charAt(0) || user.username?.charAt(0) || 'U'}
                     </div>
                   )}
                   
                   <label 
                     htmlFor="photo-upload" 
-                    className="position-absolute bottom-0 end-0 btn btn-sm btn-primary rounded-circle"
-                    style={{ width: '32px', height: '32px' }}
+                    className="position-absolute"
+                    style={{ 
+                      bottom: 0, 
+                      right: 0, 
+                      width: '2.5rem', 
+                      height: '2.5rem',
+                      background: '#206bc4',
+                      border: '3px solid #fff',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#1a5db1'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = '#206bc4'}
                   >
-                    <Camera size={16} />
+                    <Camera size={18} color="#fff" />
                     <input
                       id="photo-upload"
                       type="file"
                       accept="image/*"
                       onChange={handlePhotoUpload}
                       style={{ display: 'none' }}
+                      disabled={loading}
                     />
                   </label>
                 </div>
                 
-                <h3 className="m-0">{user.displayName}</h3>
-                <div className="text-muted">{user.email}</div>
+                <h3 className="mb-0">{user.displayName || user.username}</h3>
+                <div className="text-muted">@{user.username}</div>
                 
-                {user.isMasterAdmin && (
-                  <div className="mt-3">
-                    <span className="badge bg-primary">Master Admin</span>
+                <div className="mt-3">
+                  {user.isMasterAdmin && (
+                    <span className="badge bg-primary">
+                      <Shield size={12} className="me-1" />
+                      Master Admin
+                    </span>
+                  )}
+                  {user.approved ? (
+                    <span className="badge bg-success ms-1">Approved</span>
+                  ) : (
+                    <span className="badge bg-warning ms-1">Pending</span>
+                  )}
+                </div>
+
+                <div className="mt-3 pt-3 border-top">
+                  <div className="d-flex align-items-center justify-content-center text-muted small">
+                    <Calendar size={14} className="me-1" />
+                    Joined {new Date(user.createdAt || Date.now()).toLocaleDateString()}
                   </div>
-                )}
+                </div>
               </div>
             </div>
 
+            {/* Navigation */}
             <div className="card mt-3">
               <div className="list-group list-group-flush">
                 <button
                   className={`list-group-item list-group-item-action ${activeTab === 'profile' ? 'active' : ''}`}
                   onClick={() => setActiveTab('profile')}
+                  style={{ border: 'none', cursor: 'pointer' }}
                 >
                   <User size={16} className="me-2" />
                   Profile Information
@@ -191,6 +257,7 @@ const Profile: React.FC = () => {
                 <button
                   className={`list-group-item list-group-item-action ${activeTab === 'password' ? 'active' : ''}`}
                   onClick={() => setActiveTab('password')}
+                  style={{ border: 'none', cursor: 'pointer' }}
                 >
                   <Key size={16} className="me-2" />
                   Change Password
@@ -201,6 +268,11 @@ const Profile: React.FC = () => {
 
           <div className="col-md-9">
             <div className="card">
+              <div className="card-header">
+                <h3 className="card-title">
+                  {activeTab === 'profile' ? 'Profile Information' : 'Change Password'}
+                </h3>
+              </div>
               <div className="card-body">
                 {activeTab === 'profile' && (
                   <form onSubmit={handleProfileSubmit}>
@@ -267,6 +339,7 @@ const Profile: React.FC = () => {
                         className="form-control"
                         value={user.username}
                         disabled
+                        style={{ background: '#f8fafc' }}
                       />
                       <div className="form-hint">Username cannot be changed</div>
                     </div>
